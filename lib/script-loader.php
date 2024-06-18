@@ -5,7 +5,7 @@
  * @package gutenberg
  */
 
-// Remove core actions to override.
+// Remove core actions to override. Test comment.
 remove_action( 'wp_enqueue_scripts', 'wp_enqueue_global_styles' );
 remove_action( 'wp_footer', 'wp_enqueue_global_styles', 1 );
 
