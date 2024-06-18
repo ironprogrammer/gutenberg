@@ -1,0 +1,70 @@
+name: Apply label if PR contains PHP changes
+
+on:
+    #  pull_request:
+    #    types: [ opened, synchronize ]
+    push:
+        branches:
+            - '**'
+jobs:
+    detect_php_changes:
+        name: Apply PHP changes label
+        runs-on: ubuntu-latest
+        #    if: ${{ github.repository == 'WordPress/gutenberg' || github.event_name == 'pull_request' }}
+        if: ${{ github.repository == 'ironprogrammer/gutenberg' }}
+        steps:
+            - name: Check out code
+              uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+              with:
+                  fetch-depth: 0
+                  show-progress: ${{ runner.debug == '1' && 'true' || 'false' }}
+
+            # Gets changed PHP or associated files
+            - name: Get changed PHP files
+              id: changed-files-php
+              uses: tj-actions/changed-files@d6babd6899969df1a11d14c368283ea4436bca78 # v44.5.2
+              with:
+                  files: |
+                      lib/**
+                      packages/**/*.php
+                      phpunit/**
+
+            # Prints changed PHP files to log
+            - name: List all changed files
+              if: steps.changed-files-php.outputs.any_changed == 'true'
+              id: list-changed-php-files
+              run: |
+                  echo "Changed files:"
+                  formatted_change_list=""
+                  for file in ${{ steps.changed-files-php.outputs.all_changed_files }}; do
+                    echo "$file was changed"
+                    formatted_change_list+="<br>:grey_question: $file"
+                  done
+                  formatted_change_list+="<br>"
+                  echo "formatted_change_list=$formatted_change_list" >> $GITHUB_OUTPUT
+
+            # Adds label if PHP file changes were detected
+            - name: Add PHP label
+              if: steps.changed-files-php.outputs.any_changed == 'true'
+              uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+              with:
+                  script: |
+                      github.rest.issues.addLabels({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: context.issue.number,
+                        labels: ['Has PHP Changes']
+                      })
+
+            # Removes label if no PHP file changes were detected
+            - name: Remove PHP label
+              if: steps.changed-files-php.outputs.any_changed != 'true'
+              uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+              with:
+                  script: |
+                      github.rest.issues.removeLabel({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: context.issue.number,
+                        name: 'Has PHP Changes'
+                      })
